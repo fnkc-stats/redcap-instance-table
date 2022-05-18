@@ -33,6 +33,7 @@ class InstanceTable extends AbstractExternalModule
         const ACTION_TAG_LABEL = '@INSTANCETABLE_LABEL';
         const ACTION_TAG_SCROLLX = '@INSTANCETABLE_SCROLLX';
         const ACTION_TAG_HIDEADDBTN = '@INSTANCETABLE_HIDEADD'; // i.e. hide "Add" button even if user has edit access to form
+        const ACTION_TAG_PAGESIZE = '@INSTANCETABLE_PAGESIZE'; // Override default choices for page sizing: specify integer default page size, use -1 for All
         const ACTION_TAG_REF = '@INSTANCETABLE_REF';
         const ACTION_TAG_SRC = '@INSTANCETABLE_SRC'; // deprecated
         const ACTION_TAG_DST = '@INSTANCETABLE_DST'; // deprecated
@@ -158,6 +159,16 @@ class InstanceTable extends AbstractExternalModule
                                     if (preg_match("/".self::ACTION_TAG_DST."='?((\w+_arm_\d+[a-z]?:)?\w+)'?\s?/", $fieldDetails['field_annotation'], $matches)) {
                                         $filter  = "[" . $matches[1] ."]='" .$join_val."'";
                                     }
+                                }
+
+                                if (preg_match("/".self::ACTION_TAG_PAGESIZE."\s*=\s*'?(-?\d+)'?\s?/", $fieldDetails['field_annotation'], $matches)) {
+                                        $pageSize = intval($matches[1]);
+                                        if ($pageSize < -1) {
+                                            $pageSize = -1;
+                                        }
+                                        $repeatingFormDetails['page_size'] = $pageSize;
+                                } else {
+                                        $repeatingFormDetails['page_size'] = 0;
                                 }
 
                                 $ajaxUrl = $this->getUrl('instance_table_ajax.php');
@@ -467,17 +478,31 @@ var <?php echo self::MODULE_VARNAME;?> = (function(window, document, $, app_path
     var config = <?php echo json_encode($this->taggedFields, JSON_PRETTY_PRINT);?>;
     var taggedFieldNames = [];
         var defaultValueForNewPopup = '<?php echo js_escape($this->defaultValueForNewPopup);?>';
+    var lengthVal;
+    var lengthLbl;
 
     function init() {
         config.forEach(function(taggedField) {
             taggedFieldNames.push(taggedField.field_name);
             $('#'+taggedField.field_name+'-tr td:last')
                     .append(taggedField.markup);
+            switch(taggedField.page_size) {
+                case 0:
+                    lengthVal = [10, 25, 50, 100, -1];
+                    lengthLbl = [10, 25, 50, 100, "<?=$this->lang['docs_44']?>"]; // "ALL"
+                    break;
+                case -1:
+                    lengthVal = [-1];
+                    lengthLbl = ["<?=$this->lang['docs_44']?>"]; // "ALL"
+                    break;
+                default:
+                    lengthVal = lengthLbl = [taggedField.page_size];
+            } 
             var thisTbl = $('#'+taggedField.html_table_id)
                     .DataTable( {
                         "stateSave": true,
                         "stateDuration": 0,
-                        "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]]
+                        "lengthMenu": [lengthVal, lengthLbl]
                     } );
             if (!isSurvey) {
                 thisTbl.ajax.url(taggedField.ajax_url).load();
