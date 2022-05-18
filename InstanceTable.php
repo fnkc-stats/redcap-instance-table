@@ -34,6 +34,7 @@ class InstanceTable extends AbstractExternalModule
         const ACTION_TAG_SCROLLX = '@INSTANCETABLE_SCROLLX';
         const ACTION_TAG_HIDEADDBTN = '@INSTANCETABLE_HIDEADD'; // i.e. hide "Add" button even if user has edit access to form
         const ACTION_TAG_PAGESIZE = '@INSTANCETABLE_PAGESIZE'; // Override default choices for page sizing: specify integer default page size, use -1 for All
+        const ACTION_TAG_REF_PREFIX = '@INSTANCETABLE_REF_PREFIX';
         const ACTION_TAG_REF = '@INSTANCETABLE_REF';
         const ACTION_TAG_SRC = '@INSTANCETABLE_SRC'; // deprecated
         const ACTION_TAG_DST = '@INSTANCETABLE_DST'; // deprecated
@@ -146,9 +147,16 @@ class InstanceTable extends AbstractExternalModule
                                 // the medications shown in the instance table on a visit instance should be filtered by their relationship with that visit instance
                                 $filter = '';
                                 $this->defaultValueForNewPopup = '';
+
+                                $join_prefix = '';
+                                if (preg_match("/".self::ACTION_TAG_REF_PREFIX."\s*=\s*'?(\w+)'?\s?/", $fieldDetails['field_annotation'], $matches)) {
+                                    $join_prefix = $matches[1];
+                                }
+
                                 if (preg_match("/".self::ACTION_TAG_REF."\s*=\s*'?((\w+_arm_\d+[a-z]?:)?\w+)'?\s?/", $fieldDetails['field_annotation'], $matches)) {
                                     $join_val  = ($this->repeat_instance == null || empty($this->repeat_instance))
                                         ? 1 : $this->repeat_instance;
+                                    $join_val  = $join_prefix . $join_val;
                                     $filter  = "[" . trim($matches[1]) ."]='" .$join_val."'";
                                     $this->defaultValueForNewPopup = '&parent_instance='.$join_val;
                                 }
@@ -156,6 +164,7 @@ class InstanceTable extends AbstractExternalModule
                                 if (preg_match("/".self::ACTION_TAG_SRC."='?((\w+_arm_\d+[a-z]?:)?\w+)'?\s?/", $fieldDetails['field_annotation'], $matches)) {
                                     $recordData = REDCap::getData('array', $this->record, $matches[1], $this->event_id, null, false, false, false, null, false); // export raw
                                     $join_val  = $recordData[1]['repeat_instances'][$this->event_id][$this->instrument][$this->repeat_instance][$matches[1]];
+                                    $join_val  = $join_prefix . $join_val;
                                     if (preg_match("/".self::ACTION_TAG_DST."='?((\w+_arm_\d+[a-z]?:)?\w+)'?\s?/", $fieldDetails['field_annotation'], $matches)) {
                                         $filter  = "[" . $matches[1] ."]='" .$join_val."'";
                                     }
